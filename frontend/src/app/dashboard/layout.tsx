@@ -2,32 +2,15 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div className="pulse-dot" style={{ width: 16, height: 16 }} />
-      </div>
-    );
-  }
-
-  if (!user) return null;
 
   const navItems = [
     { href: '/dashboard', icon: '◆', label: 'Overview' },
@@ -110,9 +93,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           {!sidebarCollapsed && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>
-                {user.full_name || user.username}
+                {user?.full_name || user?.username || 'Local User'}
               </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>{user.email}</div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>{user?.email || 'local mode'}</div>
             </div>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
@@ -125,7 +108,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             {!sidebarCollapsed && (
               <button onClick={logout} className="btn-outline"
                 style={{ padding: '6px 10px', fontSize: 12, color: '#ff4444', borderColor: 'rgba(255,68,68,0.3)', flex: 1 }}>
-                Logout
+                Local Mode
               </button>
             )}
           </div>

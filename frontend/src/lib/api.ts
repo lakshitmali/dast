@@ -54,7 +54,11 @@ class ApiClient {
           },
         });
         if (!retryResponse.ok) {
-          throw new Error(`API Error: ${retryResponse.status}`);
+          const retryError = await retryResponse.json().catch(() => ({}));
+          const retryDetail = typeof retryError.detail === 'string'
+            ? retryError.detail
+            : retryError.detail ? JSON.stringify(retryError.detail) : `API Error: ${retryResponse.status}`;
+          throw new Error(retryDetail);
         }
         return retryResponse.json();
       }
@@ -69,7 +73,10 @@ class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `API Error: ${response.status}`);
+      const detail = typeof errorData.detail === 'string'
+        ? errorData.detail
+        : errorData.detail ? JSON.stringify(errorData.detail) : `API Error: ${response.status}`;
+      throw new Error(detail);
     }
 
     // Handle PDF/binary responses

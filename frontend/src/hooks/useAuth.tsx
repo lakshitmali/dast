@@ -18,26 +18,21 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Authentication is intentionally disabled for this local deployment.
+  const [user, setUser] = useState<User | null>({
+    id: 'local-demo-user',
+    email: 'demo@localhost',
+    username: 'demo',
+    full_name: 'Demo User',
+    is_active: true,
+    is_admin: true,
+    tos_accepted_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  });
+  const [loading, setLoading] = useState(false);
 
   const refreshUser = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-      const userData = await api.getMe() as User;
-      setUser(userData);
-    } catch {
-      setUser(null);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -54,8 +49,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    setUser(null);
-    api.logout();
+    // Keep the local app usable without a login screen.
+    setUser({
+      id: 'local-demo-user', email: 'demo@localhost', username: 'demo',
+      full_name: 'Demo User', is_active: true, is_admin: true,
+      tos_accepted_at: new Date().toISOString(), created_at: new Date().toISOString(),
+    });
   };
 
   return (

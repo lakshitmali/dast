@@ -40,7 +40,7 @@ export default function AboutPage() {
           <Link href="/" style={{ color: '#f1f5f9', textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#00ff88'} onMouseOut={e => e.currentTarget.style.color = '#f1f5f9'}>Home</Link>
           <Link href="/dashboard/scans/new" style={{ color: '#f1f5f9', textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#00ff88'} onMouseOut={e => e.currentTarget.style.color = '#f1f5f9'}>Scan</Link>
           <Link href="/about" style={{ color: '#00ff88', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>About</Link>
-          <Link href="/login" className="btn-glow btn-glow-green" style={{ padding: '8px 20px', fontSize: 14, textDecoration: 'none' }}>Login</Link>
+          <Link href="/dashboard/scans/new" className="btn-glow btn-glow-green" style={{ padding: '8px 20px', fontSize: 14, textDecoration: 'none' }}>Open Dashboard</Link>
         </nav>
       </header>
 

@@ -4,7 +4,9 @@ DAST Platform — FastAPI Application Entry Point
 
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.database import init_db
@@ -63,6 +65,33 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(ConnectionRefusedError)
+async def database_connection_error(request: Request, exc: ConnectionRefusedError):
+    """Turn unavailable local services into an actionable, non-secret error."""
+    logger.exception("database_connection_failed path=%s", request.url.path)
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "Database unavailable",
+            "detail": "PostgreSQL is not reachable. Start PostgreSQL and verify DATABASE_URL.",
+            "component": "database",
+        },
+    )
+
+
+@app.exception_handler(SQLAlchemyError)
+async def database_query_error(request: Request, exc: SQLAlchemyError):
+    logger.exception("database_query_failed path=%s", request.url.path)
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "Database unavailable",
+            "detail": "The database operation could not be completed. Verify PostgreSQL and migrations.",
+            "component": "database",
+        },
+    )
 
 # ─── CORS Middleware ─────────────────────────────────────────────────────────
 app.add_middleware(

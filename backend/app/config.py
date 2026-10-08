@@ -13,8 +13,8 @@ _ENV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:dast1234@localhost:5433/dast_db"
-    DATABASE_URL_SYNC: str = "postgresql://postgres:dast1234@localhost:5433/dast_db"
+    DATABASE_URL: str = "postgresql+asyncpg://dast:dast_secret@localhost:5432/dast_db"
+    DATABASE_URL_SYNC: str = "postgresql+psycopg://dast:dast_secret@localhost:5432/dast_db"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     BACKEND_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = "http://localhost:3000"
     DEBUG: bool = True
+    # Development-only escape hatch for authorized local lab targets.
+    ALLOW_LOCAL_TARGETS: bool = False
 
     # Fuzzer
     FUZZER_THREADS: int = 30

@@ -6,6 +6,7 @@ Validates scan targets to prevent SSRF and unauthorized scanning.
 import re
 import socket
 import ipaddress
+from app.config import get_settings
 from urllib.parse import urlparse
 from dataclasses import dataclass
 from enum import Enum
@@ -93,8 +94,12 @@ class TargetVerifier:
 
             domain = parsed.hostname.lower()
 
-            # Check blocked domains
-            if domain in BLOCKED_DOMAINS:
+            settings = get_settings()
+            allow_local = settings.DEBUG and settings.ALLOW_LOCAL_TARGETS
+
+            # Local/private targets are allowed only in an explicitly enabled
+            # development lab mode. Production keeps the SSRF blocklist.
+            if domain in BLOCKED_DOMAINS and not (allow_local and domain == "localhost"):
                 return VerificationResult(
                     status=VerificationStatus.BLOCKED_DOMAIN,
                     message=f"Domain '{domain}' is blocked. Cannot scan localhost or internal domains.",
@@ -103,7 +108,7 @@ class TargetVerifier:
 
             # Check blocked patterns
             for pattern in BLOCKED_PATTERNS:
-                if re.match(pattern, domain):
+                if re.match(pattern, domain) and not allow_local:
                     return VerificationResult(
                         status=VerificationStatus.BLOCKED_DOMAIN,
                         message=f"Domain '{domain}' matches a blocked pattern. Internal/private domains cannot be scanned.",
@@ -128,6 +133,18 @@ class TargetVerifier:
         try:
             ip_address_str = socket.gethostbyname(domain)
             ip_obj = ipaddress.ip_address(ip_address_str)
+
+            settings = get_settings()
+            allow_local = settings.DEBUG and settings.ALLOW_LOCAL_TARGETS
+
+            if (ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved) and allow_local:
+                return VerificationResult(
+                    status=VerificationStatus.VALID,
+                    message=f"Local lab target '{domain}' resolves to {ip_address_str}",
+                    resolved_ip=ip_address_str,
+                    domain=domain,
+                    is_valid=True,
+                )
 
             if ip_obj.is_private:
                 return VerificationResult(

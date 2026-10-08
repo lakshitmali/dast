@@ -67,9 +67,9 @@ pip install -r requirements.txt
 Create `.env` file:
 
 ```env
-DATABASE_URL=postgresql+asyncpg://postgres:YOUR_PASSWORD@localhost:5433/dast_db
-DATABASE_URL_SYNC=postgresql://postgres:YOUR_PASSWORD@localhost:5433/dast_db
-REDIS_URL=redis://localhost:6379/0
+DATABASE_URL=postgresql+asyncpg://dast:dast_secret@localhost:5432/dast_db
+DATABASE_URL_SYNC=postgresql+psycopg://dast:dast_secret@localhost:5432/dast_db
+REDIS_URL=redis://localhost:6380/0
 SECRET_KEY=your-super-secret-key
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=1440

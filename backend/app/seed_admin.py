@@ -31,7 +31,7 @@ async def seed_admin():
             full_name="Mulugeta Ababi",
             is_active=True,
             is_admin=True,
-        ){"status":"healthy","service":"DAST Platform API","version":"1.0.0"}
+        )
         session.add(admin)
         await session.commit()
         print("✓ Admin user created successfully")

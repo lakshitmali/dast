@@ -3,6 +3,8 @@ DAST Platform — Scan API Routes
 """
 
 import uuid
+import logging
+import os
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -21,8 +23,10 @@ from app.schemas.scan import (
 )
 from app.api.deps import get_current_user
 from app.core.target_verification import target_verifier
+from app.config import get_settings
 
 router = APIRouter(prefix="/api/scans", tags=["Scans"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("", response_model=ScanResponse, status_code=201)
@@ -32,6 +36,7 @@ async def create_scan(
     db: AsyncSession = Depends(get_db),
 ):
     """Create and launch a new vulnerability scan."""
+    logger.info("scan_request_received target=%s scan_type=%s user_id=%s", data.target_url, data.scan_type, current_user.id)
     # Check ToS acceptance
     if not data.tos_accepted:
         raise HTTPException(
@@ -46,12 +51,29 @@ async def create_scan(
         )
 
     # Verify target
-    verification = target_verifier.verify_target(data.target_url)
+    try:
+        verification = target_verifier.verify_target(data.target_url)
+    except Exception:
+        logger.exception("target_validation_failed target=%s", data.target_url)
+        raise HTTPException(status_code=400, detail={
+            "error": "Invalid target URL",
+            "detail": "Target validation failed.",
+            "component": "target_validation",
+        })
     if not verification.is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Target verification failed: {verification.message}",
         )
+
+    settings = get_settings()
+    if data.scan_type.value in {"full", "nuclei_only", "nuclei_zap"} and not os.path.isfile(settings.NUCLEI_PATH):
+        logger.error("nuclei_unavailable path=%s", settings.NUCLEI_PATH)
+        raise HTTPException(status_code=503, detail={
+            "error": "Scanner unavailable",
+            "detail": "Nuclei executable was not found. Set NUCLEI_PATH or install Nuclei before starting this scan type.",
+            "component": "nuclei",
+        })
 
     # Extract domain
     parsed = urlparse(data.target_url)
@@ -66,8 +88,18 @@ async def create_scan(
         status=ScanStatus.PENDING,
     )
     db.add(scan)
-    await db.commit()
-    await db.refresh(scan)
+    try:
+        await db.commit()
+        await db.refresh(scan)
+        logger.info("scan_record_created scan_id=%s", scan.id)
+    except Exception:
+        await db.rollback()
+        logger.exception("database_scan_create_failed")
+        raise HTTPException(status_code=503, detail={
+            "error": "Scan initialization failed",
+            "detail": "Database is unavailable or the scan schema is not initialized.",
+            "component": "database",
+        })
 
     # Dispatch Celery task — commit first so worker can read the scan from DB
     try:
@@ -81,11 +113,17 @@ async def create_scan(
         scan.celery_task_id = task.id
         await db.commit()
         await db.refresh(scan)
-    except Exception as e:
+    except Exception:
+        logger.exception("scan_queue_failed scan_id=%s", scan.id)
         scan.status = ScanStatus.FAILED
-        scan.error_message = f"Failed to queue scan: {str(e)}"
+        scan.error_message = "Task queue is unavailable. Start Redis and the Celery worker."
         await db.commit()
         await db.refresh(scan)
+        raise HTTPException(status_code=503, detail={
+            "error": "Scan initialization failed",
+            "detail": "Task queue is unavailable. Start Redis and the Celery worker.",
+            "component": "redis",
+        })
 
     return scan
 
